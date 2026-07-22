@@ -1,0 +1,9 @@
+{
+  "uuid": "desktop-digital-clock@yourdomain.com",
+  "name": "Desktop Digital Clock",
+  "description": "An elegant, customizable floating digital desktop clock widget with drag-and-drop placement positioning.",
+  "shell-version": [
+    "45", "46", "47", "48", "49", "50"
+  ],
+  "url": "https://github.com/SANJAY-N0/desktop-digital-clock"
+}

@@ -1,0 +1,2142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>k-Map - Indoor Navigation & Graph Editor</title>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary: #6366F1;
+      --primary-hover: #4F46E5;
+      --primary-light: rgba(99, 102, 241, 0.15);
+      --bg-dark: #090D16;
+      --panel-bg: rgba(15, 23, 42, 0.75);
+      --panel-border: rgba(255, 255, 255, 0.08);
+      --text-main: #F1F5F9;
+      --text-muted: #94A3B8;
+      --accent: #10B981;
+      --accent-hover: #059669;
+      --path-color: #3B82F6;
+      --glow-color: rgba(59, 130, 246, 0.4);
+      --orange-highlight: #F97316;
+      --purple-highlight: #A855F7;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Plus Jakarta Sans', 'Outfit', sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    body {
+      background-color: var(--bg-dark);
+      color: var(--text-main);
+      overflow: hidden;
+      height: 100vh;
+      display: flex;
+    }
+
+    /* Main Layout */
+    .app-container {
+      display: flex;
+      width: 100vw;
+      height: 100vh;
+      position: relative;
+    }
+
+    /* Sidebar Glassmorphism */
+    .sidebar {
+      width: 380px;
+      height: 100%;
+      background: var(--panel-bg);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-right: 1px solid var(--panel-border);
+      display: flex;
+      flex-direction: column;
+      z-index: 10;
+      box-shadow: 10px 0 30px rgba(0, 0, 0, 0.5);
+    }
+
+    .sidebar-header {
+      padding: 24px;
+      border-bottom: 1px solid var(--panel-border);
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .logo-container {
+      background: linear-gradient(135deg, var(--primary), #818CF8);
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 20px;
+      color: white;
+      box-shadow: 0 8px 20px rgba(99, 102, 241, 0.3);
+    }
+
+    .brand-title {
+      font-size: 24px;
+      font-weight: 800;
+      background: linear-gradient(to right, #FFFFFF, #C7D2FE);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      letter-spacing: -0.5px;
+    }
+
+    .brand-subtitle {
+      font-size: 11px;
+      color: var(--accent);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      margin-top: 2px;
+    }
+
+    /* Floor Plan Manager Panel */
+    .manager-panel {
+      padding: 16px 24px;
+      border-bottom: 1px solid var(--panel-border);
+      background: rgba(255, 255, 255, 0.02);
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .select-wrapper {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+
+    .map-select {
+      width: 100%;
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid var(--panel-border);
+      border-radius: 8px;
+      padding: 10px 12px;
+      color: white;
+      font-size: 13px;
+      outline: none;
+      cursor: pointer;
+      appearance: none;
+      -webkit-appearance: none;
+      transition: all 0.3s;
+    }
+
+    .map-select:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 10px rgba(99, 102, 241, 0.2);
+    }
+
+    .select-arrow {
+      position: absolute;
+      right: 12px;
+      pointer-events: none;
+      font-size: 10px;
+      color: var(--text-muted);
+    }
+
+    /* Tabs Layout */
+    .tabs-nav {
+      display: flex;
+      border-bottom: 1px solid var(--panel-border);
+      background: rgba(0, 0, 0, 0.2);
+    }
+
+    .tab-btn {
+      flex: 1;
+      padding: 14px;
+      background: transparent;
+      border: none;
+      border-bottom: 2px solid transparent;
+      color: var(--text-muted);
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .tab-btn.active {
+      color: var(--primary);
+      border-bottom-color: var(--primary);
+      background: rgba(99, 102, 241, 0.05);
+    }
+
+    .tab-content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px 24px;
+      display: none;
+    }
+
+    .tab-content.active {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    /* Input Group */
+    .search-wrapper {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .search-box {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+
+    .search-input {
+      width: 100%;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--panel-border);
+      border-radius: 10px;
+      padding: 12px 14px 12px 38px;
+      color: white;
+      font-size: 14px;
+      outline: none;
+      transition: all 0.3s;
+    }
+
+    .search-input:focus {
+      background: rgba(255, 255, 255, 0.08);
+      border-color: var(--primary);
+      box-shadow: 0 0 12px rgba(99, 102, 241, 0.2);
+    }
+
+    .search-icon {
+      position: absolute;
+      left: 14px;
+      font-size: 12px;
+      color: var(--text-muted);
+      pointer-events: none;
+    }
+
+    .suggestions-list {
+      position: absolute;
+      top: calc(100% + 6px);
+      left: 0;
+      right: 0;
+      background: rgba(15, 23, 42, 0.95);
+      backdrop-filter: blur(25px);
+      border: 1px solid var(--panel-border);
+      border-radius: 10px;
+      max-height: 200px;
+      overflow-y: auto;
+      z-index: 20;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+      display: none;
+      list-style: none;
+    }
+
+    .suggestion-item {
+      padding: 10px 14px;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      transition: all 0.2s;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+    }
+
+    .suggestion-item:hover {
+      background: rgba(99, 102, 241, 0.15);
+      color: white;
+    }
+
+    .suggestion-name {
+      font-weight: 600;
+      font-size: 13px;
+    }
+
+    .suggestion-category {
+      font-size: 10px;
+      background: rgba(255, 255, 255, 0.08);
+      padding: 2px 6px;
+      border-radius: 12px;
+      color: var(--text-muted);
+    }
+
+    .change-start-btn {
+      position: absolute;
+      right: 10px;
+      background: var(--primary);
+      border: none;
+      border-radius: 6px;
+      color: white;
+      padding: 4px 8px;
+      cursor: pointer;
+      font-size: 11px;
+      font-weight: 600;
+      transition: background 0.2s;
+    }
+
+    .change-start-btn:hover {
+      background: var(--primary-hover);
+    }
+
+    .change-start-btn.selecting {
+      background: #EF4444;
+    }
+
+    /* POI Cards */
+    .poi-list-title {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: var(--text-muted);
+      margin-bottom: 12px;
+      font-weight: 700;
+    }
+
+    .poi-card {
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid var(--panel-border);
+      border-radius: 10px;
+      padding: 12px 14px;
+      margin-bottom: 10px;
+      cursor: pointer;
+      transition: all 0.25s ease;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .poi-card:hover {
+      background: rgba(255, 255, 255, 0.04);
+      border-color: rgba(99, 102, 241, 0.3);
+      transform: translateY(-1px);
+    }
+
+    .poi-card.active {
+      background: var(--primary-light);
+      border-color: var(--primary);
+    }
+
+    .poi-card.active-start {
+      background: rgba(16, 185, 129, 0.15);
+      border-color: var(--accent);
+    }
+
+    .poi-name {
+      font-size: 14px;
+      font-weight: 600;
+      color: white;
+    }
+
+    .poi-desc {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    .poi-badge {
+      font-size: 9px;
+      padding: 2px 6px;
+      border-radius: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+
+    .badge-classroom { background: rgba(16, 185, 129, 0.15); color: #34D399; }
+    .badge-department { background: rgba(249, 115, 22, 0.15); color: #FB923C; }
+    .badge-services { background: rgba(59, 130, 246, 0.15); color: #60A5FA; }
+    .badge-sanitary { background: rgba(148, 163, 184, 0.15); color: #CBD5E1; }
+
+    /* Developer Mode Styling */
+    .dev-control-group {
+      background: rgba(0, 0, 0, 0.25);
+      border: 1px solid var(--panel-border);
+      border-radius: 10px;
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .dev-label {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .dev-toggle-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 13px;
+    }
+
+    /* Switch Styling */
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 40px;
+      height: 20px;
+    }
+
+    .switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: #334155;
+      transition: .3s;
+      border-radius: 20px;
+    }
+
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 14px;
+      width: 14px;
+      left: 3px;
+      bottom: 3px;
+      background-color: white;
+      transition: .3s;
+      border-radius: 50%;
+    }
+
+    input:checked + .slider {
+      background-color: var(--primary);
+    }
+
+    input:checked + .slider:before {
+      transform: translateX(20px);
+    }
+
+    /* Inspector Info Card */
+    .inspector-card {
+      background: rgba(249, 115, 22, 0.08);
+      border: 1px solid rgba(249, 115, 22, 0.25);
+      border-radius: 10px;
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .inspector-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--orange-highlight);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .inspector-row {
+      font-size: 12px;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .inspector-label {
+      color: var(--text-muted);
+    }
+
+    .inspector-val {
+      font-family: monospace;
+      color: white;
+    }
+
+    /* Action Buttons in Developer panel */
+    .dev-btn {
+      width: 100%;
+      padding: 10px;
+      border-radius: 8px;
+      border: 1px solid rgba(99, 102, 241, 0.4);
+      background: rgba(99, 102, 241, 0.1);
+      color: white;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .dev-btn:hover {
+      background: var(--primary);
+      border-color: var(--primary);
+      box-shadow: 0 4px 12px rgba(99, 102, 241, 0.2);
+    }
+
+    .dev-btn.active {
+      background: var(--purple-highlight);
+      border-color: var(--purple-highlight);
+      box-shadow: 0 4px 12px rgba(168, 85, 247, 0.3);
+    }
+
+    /* Map Canvas Area */
+    .map-container {
+      flex: 1;
+      position: relative;
+      background-color: #0c101b;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    .map-viewport {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: grab;
+    }
+
+    .map-viewport:active {
+      cursor: grabbing;
+    }
+
+    svg#map-svg {
+      max-height: 90vh;
+      max-width: 90vw;
+      width: 100%;
+      height: auto;
+      transform-origin: center;
+      transition: transform 0.1s ease-out;
+      will-change: transform;
+    }
+
+    /* Custom SVG overlay classes styling */
+    .wp-edge {
+      stroke: var(--primary);
+      stroke-width: 0.8;
+      stroke-opacity: 0.25;
+      fill: none;
+      transition: all 0.3s;
+    }
+
+    .wp-edge.highlighted {
+      stroke: var(--orange-highlight);
+      stroke-width: 2.2;
+      stroke-opacity: 1;
+      filter: drop-shadow(0 0 4px var(--orange-highlight));
+    }
+
+    .wp-edge.manual-link {
+      stroke: var(--purple-highlight);
+      stroke-width: 1.2;
+      stroke-opacity: 0.7;
+    }
+
+    .position {
+      fill: rgba(148, 163, 184, 0.6);
+      stroke: rgba(255, 255, 255, 0.4);
+      stroke-width: 1.2;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .position:hover {
+      fill: var(--primary);
+      stroke: white;
+      filter: drop-shadow(0 0 6px var(--primary));
+    }
+
+    .position.active-start {
+      fill: var(--accent);
+      stroke: white;
+      stroke-width: 1.5;
+      filter: drop-shadow(0 0 8px var(--accent));
+    }
+
+    .position.highlighted {
+      fill: var(--orange-highlight);
+      stroke: white;
+      stroke-width: 1.5;
+      filter: drop-shadow(0 0 8px var(--orange-highlight));
+    }
+
+    .position.edit-selected {
+      fill: var(--purple-highlight);
+      stroke: white;
+      stroke-width: 1.8;
+      r: 8.5;
+      filter: drop-shadow(0 0 8px var(--purple-highlight));
+    }
+
+    /* Room Labels style adjustments */
+    text {
+      cursor: pointer;
+      user-select: none;
+      transition: fill 0.2s, font-weight 0.2s;
+    }
+    text:hover {
+      fill: var(--accent) !important;
+      font-weight: bold;
+    }
+    text.room-label-text {
+      font-weight: 500;
+    }
+    text.active-start {
+      fill: var(--accent) !important;
+      font-weight: 700;
+      filter: drop-shadow(0 0 3px var(--accent));
+    }
+    text.active-dest {
+      fill: var(--primary) !important;
+      font-weight: 700;
+      filter: drop-shadow(0 0 3px var(--primary));
+    }
+
+    #navigation-route {
+      stroke: var(--accent);
+      stroke-width: 3.5;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      opacity: 1;
+      filter: drop-shadow(0 0 8px var(--accent));
+      stroke-dasharray: 8;
+      animation: routeMarch 20s linear infinite;
+    }
+
+    @keyframes routeMarch {
+      to {
+        stroke-dashoffset: -500;
+      }
+    }
+
+    /* Floating Navigation Controls */
+    .floating-controls {
+      position: absolute;
+      bottom: 24px;
+      right: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      z-index: 10;
+    }
+
+    .control-btn {
+      width: 44px;
+      height: 44px;
+      border-radius: 10px;
+      background: rgba(15, 23, 42, 0.85);
+      border: 1px solid var(--panel-border);
+      color: white;
+      font-size: 18px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      backdrop-filter: blur(10px);
+      transition: all 0.2s;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    }
+
+    .control-btn:hover {
+      background: var(--primary);
+      border-color: var(--primary);
+      transform: scale(1.05);
+    }
+
+    /* HUD overlay for route details */
+    .route-hud {
+      position: absolute;
+      top: 24px;
+      right: 24px;
+      background: rgba(15, 23, 42, 0.85);
+      backdrop-filter: blur(15px);
+      border: 1px solid var(--panel-border);
+      padding: 16px 20px;
+      border-radius: 14px;
+      display: none;
+      flex-direction: column;
+      gap: 6px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+      z-index: 10;
+      animation: slideIn 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    @keyframes slideIn {
+      from { transform: translateY(-15px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+
+    .hud-title {
+      font-size: 11px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      font-weight: 700;
+    }
+
+    .hud-dest {
+      font-size: 16px;
+      font-weight: 700;
+      color: white;
+    }
+
+    .hud-stats {
+      display: flex;
+      gap: 20px;
+      margin-top: 4px;
+    }
+
+    .hud-stat-item {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .hud-stat-val {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--accent);
+    }
+
+    .hud-stat-lbl {
+      font-size: 10px;
+      color: var(--text-muted);
+    }
+
+    .close-hud {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: 12px;
+    }
+
+    .close-hud:hover {
+      color: white;
+    }
+
+    /* Toast Notification */
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%) translateY(100px);
+      background: rgba(99, 102, 241, 0.95);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: white;
+      padding: 12px 24px;
+      border-radius: 50px;
+      font-size: 13px;
+      font-weight: 600;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+      z-index: 10000;
+      transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      pointer-events: none;
+    }
+
+    .toast.show {
+      transform: translateX(-50%) translateY(0);
+    }
+  </style>
+</head>
+<body>
+  <div class="app-container">
+    <!-- Sidebar Panel -->
+    <aside class="sidebar">
+      <header class="sidebar-header">
+        <div class="logo-container">K</div>
+        <div>
+          <h1 class="brand-title">k-Map</h1>
+          <div class="brand-subtitle">Indoor Navigation Portal</div>
+        </div>
+      </header>
+
+      <!-- Floor Plan Manager -->
+      <div class="manager-panel">
+        <div class="dev-label">Floor Plan Manager</div>
+        <div class="select-wrapper">
+          <select id="mapSelect" class="map-select">
+            <!-- Dynamically populated from API -->
+          </select>
+          <span class="select-arrow">▼</span>
+        </div>
+        <div style="display: flex; gap: 8px;">
+          <button class="dev-btn" onclick="document.getElementById('mapFileInput').click()" title="Upload a new SVG map">
+            📤 Upload SVG
+          </button>
+          <input type="file" id="mapFileInput" accept=".svg" style="display: none;" onchange="handleMapUpload(event)">
+          <button class="dev-btn" id="saveGraphBtn" style="border-color: rgba(16, 185, 129, 0.4); background: rgba(16, 185, 129, 0.05);" onclick="saveGraphToServer()" title="Save node map to server">
+            💾 Save Graph
+          </button>
+        </div>
+      </div>
+
+      <!-- Tabs Nav -->
+      <nav class="tabs-nav">
+        <button class="tab-btn active" id="tabNavBtn" onclick="switchTab('navigation-tab')">🗺️ Wayfinder</button>
+        <button class="tab-btn" id="tabDevBtn" onclick="switchTab('developer-tab')">⚙️ Graph Editor</button>
+      </nav>
+
+      <!-- Tab Content: Navigation -->
+      <div id="navigation-tab" class="tab-content active">
+        <!-- Search Panel -->
+        <div class="search-wrapper">
+          <div class="search-box">
+            <span class="search-icon">🟢</span>
+            <input type="text" class="search-input" id="startSearch" placeholder="From: Select start room..." readonly>
+            <button class="change-start-btn" id="changeStartBtn">Tap Map</button>
+          </div>
+          
+          <div class="search-box">
+            <span class="search-icon">🔴</span>
+            <input type="text" class="search-input" id="poiSearch" placeholder="To: Search room or tap label...">
+            <ul class="suggestions-list" id="suggestions"></ul>
+          </div>
+        </div>
+
+        <div style="flex: 1; display: flex; flex-direction: column; overflow: hidden; margin-top: 10px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+            <h2 class="poi-list-title" style="margin-bottom: 0;">All Directory Locations</h2>
+            <button onclick="clearNavigation()" style="background: none; border: none; color: #EF4444; font-size: 11px; font-weight: 600; cursor: pointer;">Clear Route</button>
+          </div>
+          <div id="poiList" style="flex: 1; overflow-y: auto; padding-right: 4px;">
+            <!-- Rendered dynamically -->
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab Content: Developer / Graph Editor -->
+      <div id="developer-tab" class="tab-content">
+        <div class="dev-control-group">
+          <div class="dev-label">Layers Visibilities</div>
+          
+          <div class="dev-toggle-row">
+            <span>Show Navigation Nodes</span>
+            <label class="switch">
+              <input type="checkbox" id="toggleNodes" checked onchange="toggleLayer('Vertexes', this.checked)">
+              <span class="slider"></span>
+            </label>
+          </div>
+          
+          <div class="dev-toggle-row">
+            <span>Show Proximity Edges</span>
+            <label class="switch">
+              <input type="checkbox" id="toggleEdges" checked onchange="toggleLayer('Edges', this.checked)">
+              <span class="slider"></span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Manual Edge Editor Section -->
+        <div class="dev-control-group">
+          <div class="dev-label">Interactive Edge Builder</div>
+          <button class="dev-btn" id="edgeEditBtn" onclick="toggleEdgeEditMode()">
+            🔗 Manual Edge Builder Mode: OFF
+          </button>
+          <span style="font-size: 11px; color: var(--text-muted); line-height: 1.4;">
+            When active, click Node A and then Node B on the map to add or delete a direct line connection between them. Manual connections are saved locally!
+          </span>
+          <div style="display: flex; gap: 8px; margin-top: 4px;">
+            <button class="dev-btn" style="border-color: rgba(239, 68, 68, 0.4); background: rgba(239, 68, 68, 0.05);" onclick="resetToAutoGraph()">
+              🗑️ Reset All
+            </button>
+            <button class="dev-btn" style="border-color: rgba(99, 102, 241, 0.4); background: rgba(99, 102, 241, 0.05);" onclick="exportGraphJSON()">
+              📥 Export JSON
+            </button>
+          </div>
+        </div>
+
+        <div class="dev-control-group">
+          <div class="dev-label">Node / Room Inspector</div>
+          <div id="inspectorPanel">
+            <span style="font-size: 12px; color: var(--text-muted); font-style: italic;">
+              Click any node on the map to inspect its connections and coordinates.
+            </span>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Map Container -->
+    <main class="map-container">
+      <!-- Route Details HUD -->
+      <div class="route-hud" id="routeHud">
+        <button class="close-hud" onclick="clearNavigation()">✕</button>
+        <span class="hud-title">Navigation Route</span>
+        <div class="hud-dest" id="hudDestName">Room 01</div>
+        <div class="hud-stats">
+          <div class="hud-stat-item">
+            <span class="hud-stat-val" id="hudDist">0m</span>
+            <span class="hud-stat-lbl">Distance</span>
+          </div>
+          <div class="hud-stat-item">
+            <span class="hud-stat-val" id="hudTime">0s</span>
+            <span class="hud-stat-lbl">Walk Time</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Map Viewport -->
+      <div class="map-viewport" id="mapViewport">
+        <svg viewBox="0 0 1500 1100" id="map-svg">
+          <defs></defs>
+        </svg>
+      </div>
+
+      <!-- Floating Controls -->
+      <div class="floating-controls">
+        <button class="control-btn" onclick="adjustZoom(1.25)" title="Zoom In">+</button>
+        <button class="control-btn" onclick="adjustZoom(0.8)" title="Zoom Out">-</button>
+        <button class="control-btn" onclick="resetView()" title="Reset Layout">⟲</button>
+      </div>
+    </main>
+  </div>
+
+  <!-- Toast Element -->
+  <div class="toast" id="toast">Message</div>
+
+  <script>
+    // Default fallback graphData (same as mall-floor-plan.svg default)
+    const staticGraphData = {
+      vertices: [
+        { id: "v1", objectName: null, cx: 361, cy: 513 },
+        { id: "v2", objectName: null, cx: 238, cy: 513 },
+        { id: "v3", objectName: "Zara", cx: 238, cy: 906 },
+        { id: "v4", objectName: "McShark", cx: 361, cy: 906 },
+        { id: "v5", objectName: "Nike", cx: 491, cy: 906 },
+        { id: "v6", objectName: "Adidas", cx: 623, cy: 906 },
+        { id: "v7", objectName: "Primark", cx: 754, cy: 906 },
+        { id: "v8", objectName: "Svarovski", cx: 889, cy: 906 },
+        { id: "v9", objectName: "H&M", cx: 1020, cy: 906 },
+        { id: "v10", objectName: "Gucci", cx: 361, cy: 475 },
+        { id: "v11", objectName: "Louis Vuitton", cx: 542, cy: 475 },
+        { id: "v12", objectName: "KFC", cx: 779, cy: 475 },
+        { id: "v13", objectName: "McDonald's", cx: 1018, cy: 475 },
+        { id: "v14", objectName: "Tobacco Shop", cx: 1242, cy: 459 },
+        { id: "v15", objectName: "PetSmart", cx: 1242, cy: 641 },
+        { id: "v16", objectName: "Barbershop", cx: 1242, cy: 831 },
+        { id: "v17", objectName: "Sephora", cx: 1020, cy: 845 },
+        { id: "v18", objectName: "MediaMarkt", cx: 754, cy: 846 },
+        { id: "v19", objectName: null, cx: 754, cy: 874 },
+        { id: "v20", objectName: null, cx: 623, cy: 874 },
+        { id: "v21", objectName: null, cx: 491, cy: 874 },
+        { id: "v22", objectName: null, cx: 361, cy: 874 },
+        { id: "v23", objectName: null, cx: 238, cy: 874 },
+        { id: "v24", objectName: null, cx: 238, cy: 440 },
+        { id: "v25", objectName: "Mall Office", cx: 196, cy: 440 },
+        { id: "v26", objectName: null, cx: 542, cy: 513 },
+        { id: "v27", objectName: null, cx: 779, cy: 513 },
+        { id: "v28", objectName: null, cx: 1018, cy: 513 },
+        { id: "v29", objectName: null, cx: 1219, cy: 513 },
+        { id: "v30", objectName: null, cx: 1219, cy: 459 },
+        { id: "v31", objectName: null, cx: 1219, cy: 641 },
+        { id: "v32", objectName: null, cx: 1219, cy: 831 },
+        { id: "v33", objectName: null, cx: 1020, cy: 874 },
+        { id: "v34", objectName: "Entrance", cx: 1156, cy: 1014 },
+        { id: "v35", objectName: null, cx: 1156, cy: 971 },
+        { id: "v36", objectName: null, cx: 1106, cy: 971 },
+        { id: "v37", objectName: null, cx: 1219, cy: 971 },
+        { id: "v38", objectName: null, cx: 1106, cy: 874 },
+        { id: "v39", objectName: null, cx: 1106, cy: 513 },
+        { id: "v40", objectName: null, cx: 361, cy: 600 },
+        { id: "v41", objectName: null, cx: 361, cy: 691 },
+        { id: "v42", objectName: "North Wing Toilet", cx: 203, cy: 184 },
+        { id: "v43", objectName: "7-Eleven", cx: 346, cy: 184 },
+        { id: "v44", objectName: "Victoria's Secret", cx: 525, cy: 184 },
+        { id: "v45", objectName: "Pandora", cx: 661, cy: 184 },
+        { id: "v46", objectName: "Foot Locker", cx: 833, cy: 184 },
+        { id: "v47", objectName: "Pharmacy", cx: 999, cy: 184 },
+        { id: "v48", objectName: "GameStop", cx: 1182, cy: 184 },
+        { id: "v49", objectName: "Claire's", cx: 1317, cy: 184 },
+        { id: "v50", objectName: "East Wing Toilet", cx: 1301, cy: 343 },
+        { id: "v51", objectName: null, cx: 1182, cy: 343 },
+        { id: "v52", objectName: null, cx: 1182, cy: 513 },
+        { id: "v53", objectName: null, cx: 1182, cy: 459 },
+        { id: "v54", objectName: null, cx: 1317, cy: 214 },
+        { id: "v55", objectName: null, cx: 1242, cy: 214 },
+        { id: "v56", objectName: null, cx: 1242, cy: 343 },
+        { id: "v57", objectName: null, cx: 238, cy: 214 },
+        { id: "v58", objectName: null, cx: 203, cy: 214 },
+        { id: "v59", objectName: "Chanel", cx: 346, cy: 243 },
+        { id: "v60", objectName: "Rolex", cx: 525, cy: 243 },
+        { id: "v61", objectName: null, cx: 525, cy: 214 },
+        { id: "v62", objectName: null, cx: 346, cy: 214 },
+        { id: "v63", objectName: null, cx: 661, cy: 214 },
+        { id: "v64", objectName: null, cx: 661, cy: 254 },
+        { id: "v65", objectName: null, cx: 661, cy: 513 },
+        { id: "v66", objectName: null, cx: 833, cy: 214 },
+        { id: "v67", objectName: null, cx: 902, cy: 214 },
+        { id: "v68", objectName: null, cx: 902, cy: 513 },
+        { id: "v69", objectName: null, cx: 999, cy: 214 },
+        { id: "v70", objectName: null, cx: 1182, cy: 214 },
+        { id: "v71", objectName: null, cx: 433, cy: 874 },
+        { id: "v72", objectName: "Starbucks", cx: 433, cy: 846 },
+        { id: "v73", objectName: null, cx: 889, cy: 874 },
+        { id: "v74", objectName: "Levi's", cx: 381, cy: 599 },
+        { id: "v75", objectName: "Vans", cx: 381, cy: 691 },
+        { id: "v76", objectName: null, cx: 1106, cy: 790 },
+        { id: "v77", objectName: null, cx: 1219, cy: 790 }
+      ],
+      edges: [
+        { id: "v1_to_v2", from: "v1", to: "v2" },
+        { id: "v34_to_v35", from: "v34", to: "v35" },
+        { id: "v35_to_v36", from: "v35", to: "v36" },
+        { id: "v36_to_v38", from: "v36", to: "v38" },
+        { id: "v33_to_v38", from: "v33", to: "v38" },
+        { id: "v9_to_v33", from: "v9", to: "v33" },
+        { id: "v33_to_v35", from: "v9", to: "v33" },
+        { id: "v33_to_v73", from: "v33", to: "v73" },
+        { id: "v19_to_v73", from: "v19", to: "v73" },
+        { id: "v19_to_v20", from: "v19", to: "v20" },
+        { id: "v20_to_v21", from: "v20", to: "v21" },
+        { id: "v21_to_v71", from: "v21", to: "v71" },
+        { id: "v21_to_v5", from: "v21", to: "v5" },
+        { id: "v20_to_v6", from: "v20", to: "v6" },
+        { id: "v19_to_v7", from: "v19", to: "v7" },
+        { id: "v73_to_v8", from: "v73", to: "v8" },
+        { id: "v22_to_v71", from: "v22", to: "v71" },
+        { id: "v22_to_v4", from: "v22", to: "v4" },
+        { id: "v71_to_v72", from: "v71", to: "v72" },
+        { id: "v22_to_v23", from: "v22", to: "v23" },
+        { id: "v23_to_v3", from: "v23", to: "v3" },
+        { id: "v22_to_v41", from: "v22", to: "v41" },
+        { id: "v1_to_v10", from: "v1", to: "v10" },
+        { id: "v1_to_v40", from: "v1", to: "v40" },
+        { id: "v1_to_v26", from: "v1", to: "v26" },
+        { id: "v11_to_v26", from: "v11", to: "v26" },
+        { id: "v26_to_v65", from: "v26", to: "v65" },
+        { id: "v27_to_v65", from: "v27", to: "v65" },
+        { id: "v12_to_v27", from: "v12", to: "v27" },
+        { id: "v27_to_v68", from: "v27", to: "v68" },
+        { id: "v40_to_v41", from: "v40", to: "v41" },
+        { id: "v19_to_v33", from: "v19", to: "v33" },
+        { id: "v52_to_v53", from: "v52", to: "v53" },
+        { id: "v51_to_v70", from: "v51", to: "v70" },
+        { id: "v28_to_v39", from: "v28", to: "v39" },
+        { id: "v39_to_v52", from: "v39", to: "v52" },
+        { id: "v29_to_v30", from: "v29", to: "v30" },
+        { id: "v14_to_v30", from: "v14", to: "v30" },
+        { id: "v15_to_v31", from: "v15", to: "v31" },
+        { id: "v16_to_v32", from: "v16", to: "v32" },
+        { id: "v13_to_v28", from: "v13", to: "v28" },
+        { id: "v51_to_v53", from: "v51", to: "v53" },
+        { id: "v55_to_v70", from: "v55", to: "v70" },
+        { id: "v2_to_v24", from: "v2", to: "v24" },
+        { id: "v24_to_v25", from: "v24", to: "v25" },
+        { id: "v24_to_v57", from: "v24", to: "v57" },
+        { id: "v57_to_v58", from: "v57", to: "v58" },
+        { id: "v42_to_v58", from: "v42", to: "v58" },
+        { id: "v57_to_v62", from: "v57", to: "v62" },
+        { id: "v43_to_v62", from: "v43", to: "v62" },
+        { id: "v59_to_v62", from: "v59", to: "v62" },
+        { id: "v61_to_v62", from: "v61", to: "v62" },
+        { id: "v44_to_v61", from: "v44", to: "v61" },
+        { id: "v60_to_v61", from: "v60", to: "v61" },
+        { id: "v61_to_v63", from: "v61", to: "v63" },
+        { id: "v45_to_v63", from: "v45", to: "v63" },
+        { id: "v63_to_v64", from: "v63", to: "v64" },
+        { id: "v49_to_v54", from: "v49", to: "v54" },
+        { id: "v55_to_v56", from: "v55", to: "v56" },
+        { id: "v51_to_v56", from: "v51", to: "v56" },
+        { id: "v50_to_v56", from: "v50", to: "v56" },
+        { id: "v30_to_v53", from: "v30", to: "v53" },
+        { id: "v29_to_v52", from: "v29", to: "v52" },
+        { id: "v29_to_v31", from: "v29", to: "v31" },
+        { id: "v35_to_v37", from: "v35", to: "v37" },
+        { id: "v18_to_v19", from: "v18", to: "v19" },
+        { id: "v64_to_v65", from: "v64", to: "v65" },
+        { id: "v67_to_v68", from: "v67", to: "v68" },
+        { id: "v28_to_v68", from: "v28", to: "v68" },
+        { id: "v63_to_v66", from: "v63", to: "v66" },
+        { id: "v2_to_v23", from: "v2", to: "v23" },
+        { id: "v17_to_v33", from: "v17", to: "v33" },
+        { id: "v46_to_v66", from: "v46", to: "v66" },
+        { id: "v32_to_v37", from: "v32", to: "v37" },
+        { id: "v54_to_v55", from: "v54", to: "v55" },
+        { id: "v47_to_v69", from: "v47", to: "v69" },
+        { id: "v67_to_v69", from: "v67", to: "v69" },
+        { id: "v66_to_v67", from: "v66", to: "v67" },
+        { id: "v69_to_v70", from: "v69", to: "v70" },
+        { id: "v48_to_v70", from: "v48", to: "v70" },
+        { id: "v38_to_v76", from: "v38", to: "v76" },
+        { id: "v39_to_v76", from: "v39", to: "v76" },
+        { id: "v76_to_v77", from: "v76", to: "v77" },
+        { id: "v31_to_v77", from: "v31", to: "v77" },
+        { id: "v32_to_v77", from: "v32", to: "v77" },
+        { id: "v41_to_v75", from: "v41", to: "v75" },
+        { id: "v40_to_v74", from: "v40", to: "v74" }
+      ]
+    };
+
+    // Database structure
+    const dbData = {
+      objects: [],
+      categories: [
+        { id: "classroom", name: "Store / POI" },
+        { id: "department", name: "Fashion Brand" },
+        { id: "services", name: "Services & Amenities" },
+        { id: "sanitary", name: "Restroom" }
+      ]
+    };
+
+    // Live variables
+    let currentGraphData = { vertices: [], edges: [] };
+    const graphData = { vertices: [], edges: [] };
+
+    let adjacencyList = {};
+    let startVertexId = null;
+    let selectedStartObj = null;
+    let selectedDestObj = null;
+    let selectingStartMode = false;
+    let selectedNodeId = null;
+
+    // Edge editor properties
+    let isEdgeEditMode = false;
+    let editFirstSelectedNodeId = null;
+    let manualEdgeOverrides = {}; // Map of manual toggles: { 'v1-v2': true/false }
+
+    // Pan & Zoom Properties
+    let zoomLevel = 1.0;
+    let panX = 0;
+    let panY = 0;
+    let isDragging = false;
+    let startDragX = 0;
+    let startDragY = 0;
+
+    let eventListenersInitialized = false;
+
+    // Initialize Page on DOMContentLoaded
+    document.addEventListener("DOMContentLoaded", () => {
+      const mapSelect = document.getElementById("mapSelect");
+      mapSelect.addEventListener("change", (e) => {
+        loadMap(e.target.value);
+      });
+
+      // Load maps dropdown, then load the first map
+      loadMapDropdown().then(() => {
+        const selectedMap = mapSelect.value;
+        if (selectedMap) {
+          loadMap(selectedMap);
+        }
+      });
+    });
+
+    // Reset Map/State when reloading maps
+    function resetMapState() {
+      adjacencyList = {};
+      startVertexId = null;
+      selectedStartObj = null;
+      selectedDestObj = null;
+      selectingStartMode = false;
+      selectedNodeId = null;
+      isEdgeEditMode = false;
+      editFirstSelectedNodeId = null;
+      manualEdgeOverrides = {};
+
+      const edgeEditBtn = document.getElementById("edgeEditBtn");
+      if (edgeEditBtn) {
+        edgeEditBtn.textContent = "🔗 Manual Edge Builder Mode: OFF";
+        edgeEditBtn.classList.remove("active");
+      }
+
+      const startSearch = document.getElementById("startSearch");
+      if (startSearch) startSearch.value = "";
+
+      const poiSearch = document.getElementById("poiSearch");
+      if (poiSearch) poiSearch.value = "";
+
+      const inspectorPanel = document.getElementById("inspectorPanel");
+      if (inspectorPanel) {
+        inspectorPanel.innerHTML = `
+          <span style="font-size: 12px; color: var(--text-muted); font-style: italic;">
+            Click any node on the map to inspect its connections and coordinates.
+          </span>`;
+      }
+
+      const navRoutePath = document.getElementById("navigation-route");
+      if (navRoutePath) navRoutePath.setAttribute("d", "");
+
+      const routeHud = document.getElementById("routeHud");
+      if (routeHud) routeHud.style.display = "none";
+    }
+
+    // Fetch available maps from the Express API
+    function loadMapDropdown() {
+      return fetch('/api/maps')
+        .then(res => res.json())
+        .then(maps => {
+          const mapSelect = document.getElementById("mapSelect");
+          mapSelect.innerHTML = "";
+          
+          maps.forEach(map => {
+            const opt = document.createElement("option");
+            opt.value = map.name;
+            opt.textContent = map.displayName;
+            mapSelect.appendChild(opt);
+          });
+          
+          if (maps.length > 0) {
+            const savedMap = localStorage.getItem('kmap_selected_map');
+            const hasSaved = maps.some(m => m.name === savedMap);
+            if (savedMap && hasSaved) {
+              mapSelect.value = savedMap;
+            } else {
+              const hasMall = maps.some(m => m.name === 'mall-floor-plan.svg');
+              if (hasMall) {
+                mapSelect.value = 'mall-floor-plan.svg';
+              } else {
+                mapSelect.value = maps[0].name;
+              }
+            }
+          }
+        })
+        .catch(err => {
+          console.error("Error loading maps dropdown", err);
+          showToast("Error listing maps from server.");
+        });
+    }
+
+    // Load SVG map and corresponding navigation graph
+    function loadMap(mapName) {
+      resetMapState();
+      localStorage.setItem('kmap_selected_map', mapName);
+      
+      const cleanName = mapName.replace('.svg', '');
+      
+      // Fetch graph configs
+      fetch(`/api/graphs/${cleanName}`)
+        .then(res => {
+          if (!res.ok) {
+            if (mapName === 'mall-floor-plan.svg') {
+              return staticGraphData;
+            }
+            return { vertices: [], edges: [] };
+          }
+          return res.json();
+        })
+        .then(graph => {
+          currentGraphData = graph;
+          
+          // Load local manual overrides for this map
+          const stored = localStorage.getItem(`kmap_manual_edges_${cleanName}`);
+          if (stored) {
+            try {
+              manualEdgeOverrides = JSON.parse(stored);
+            } catch (e) {
+              console.error("Error loading overrides", e);
+            }
+          }
+          
+          // Fetch SVG markup
+          return fetch(`/floor-plans/${mapName}`);
+        })
+        .then(res => {
+          if (!res.ok) throw new Error(`Could not fetch ${mapName}`);
+          return res.text();
+        })
+        .then(svgText => {
+          const parser = new DOMParser();
+          const doc = parser.parseFromString(svgText, "image/svg+xml");
+          const externalSvg = doc.querySelector("svg");
+          
+          if (!externalSvg) {
+            showToast("Error parsing map SVG.");
+            return;
+          }
+
+          const mapSvg = document.getElementById("map-svg");
+          mapSvg.innerHTML = "<defs></defs>"; // Reset contents
+          mapSvg.setAttribute("viewBox", externalSvg.getAttribute("viewBox") || "0 0 1500 1100");
+
+          // Inject Defs
+          const defs = externalSvg.querySelector("defs");
+          if (defs) {
+            mapSvg.querySelector("defs").innerHTML = defs.innerHTML;
+          }
+
+          // Inject background layers
+          const children = Array.from(externalSvg.children).filter(c => c.tagName.toLowerCase() !== 'defs');
+          children.forEach(child => {
+            mapSvg.appendChild(child.cloneNode(true));
+          });
+
+          // Append our route layers on top of background
+          const routeGroup = document.createElementNS("http://www.w3.org/2000/svg", "g");
+          routeGroup.id = "Edges";
+          routeGroup.innerHTML = '<path id="navigation-route" d="" fill="none" />';
+          mapSvg.appendChild(routeGroup);
+
+          const vertexGroup = document.createElementNS("http://www.w3.org/2000/svg", "g");
+          vertexGroup.id = "Vertexes";
+          mapSvg.appendChild(vertexGroup);
+
+          // Initialize Map Elements & Graph
+          parseSVGFloorPlan();
+          renderPOIList();
+          setupEventListeners();
+          initializeGraph();
+          drawGraphNodes();
+          drawGraphEdges();
+          updateNavigationUI();
+          resetView();
+        })
+        .catch(err => {
+          console.error(err);
+          showToast(`Error loading map: ${mapName}`);
+        });
+    }
+
+    // Handle Upload of dynamic map SVGs
+    function handleMapUpload(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      
+      const formData = new FormData();
+      formData.append('floorPlan', file);
+      
+      fetch('/api/upload', {
+        method: 'POST',
+        body: formData
+      })
+      .then(res => {
+        if (!res.ok) return res.json().then(data => { throw new Error(data.error || 'Upload failed'); });
+        return res.json();
+      })
+      .then(data => {
+        showToast("Map uploaded successfully!");
+        loadMapDropdown().then(() => {
+          const mapSelect = document.getElementById("mapSelect");
+          mapSelect.value = data.filename;
+          loadMap(data.filename);
+        });
+      })
+      .catch(err => {
+        console.error(err);
+        showToast(`Upload failed: ${err.message}`);
+      });
+    }
+
+    // Save navigation network configurations back to the server
+    function saveGraphToServer() {
+      const mapSelect = document.getElementById("mapSelect");
+      const mapName = mapSelect.value;
+      if (!mapName) return;
+
+      const cleanName = mapName.replace('.svg', '');
+      
+      const graphToSave = {
+        vertices: graphData.vertices.map(v => ({ id: v.id, cx: Math.round(v.cx), cy: Math.round(v.cy), roomName: v.objectName })),
+        edges: graphData.edges.map(e => ({ from: e.from, to: e.to }))
+      };
+      
+      fetch(`/api/graphs/${cleanName}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(graphToSave)
+      })
+      .then(res => {
+        if (!res.ok) throw new Error("Failed to save graph to server");
+        return res.json();
+      })
+      .then(data => {
+        showToast("Graph saved to server successfully!");
+        localStorage.setItem(`kmap_manual_edges_${cleanName}`, JSON.stringify(manualEdgeOverrides));
+      })
+      .catch(err => {
+        console.error(err);
+        showToast("Error saving graph to server.");
+      });
+    }
+
+    // Tab Switching
+    function switchTab(tabId) {
+      document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+      
+      const activeBtn = tabId === 'navigation-tab' ? document.getElementById('tabNavBtn') : document.getElementById('tabDevBtn');
+      if (activeBtn) activeBtn.classList.add('active');
+      
+      const content = document.getElementById(tabId);
+      if (content) content.classList.add('active');
+
+      if (tabId === 'navigation-tab') {
+        highlightNode(null);
+        if (isEdgeEditMode) toggleEdgeEditMode();
+      }
+    }
+
+    // Parse circles as nodes and texts as rooms/POI targets
+    function parseSVGFloorPlan() {
+      const textElements = Array.from(document.querySelectorAll('#map-svg text')).filter(el => {
+        const text = el.textContent.trim().toLowerCase();
+        return text.length > 0 && text !== " ";
+      });
+
+      const normalizeName = (name) => {
+        return name.toLowerCase().replace(/[^a-z0-9]/g, '').trim();
+      };
+
+      // Load vertices from currentGraphData
+      graphData.vertices = (currentGraphData.vertices || []).map(v => ({
+        id: v.id,
+        objectName: v.objectName || v.roomName || null,
+        cx: v.cx,
+        cy: v.cy
+      }));
+
+      // Build Directory POIs from vertices
+      dbData.objects = [];
+      graphData.vertices.forEach(v => {
+        if (v.objectName) {
+          const roomKey = v.objectName.toLowerCase().replace(/\s+/g, '_');
+          
+          let categoryId = "classroom";
+          const nameLower = v.objectName.toLowerCase();
+          if (nameLower.includes('toilet') || nameLower.includes('restroom')) categoryId = "sanitary";
+          else if (nameLower.includes('office') || nameLower.includes('tobacco') || nameLower.includes('barber') || nameLower.includes('pharmacy') || nameLower.includes('pet')) categoryId = "services";
+          else if (nameLower.includes('gucci') || nameLower.includes('louis') || nameLower.includes('chanel') || nameLower.includes('rolex') || nameLower.includes('pandora')) categoryId = "department";
+
+          const roomObj = {
+            id: roomKey,
+            categoryId: categoryId,
+            name: v.objectName,
+            desc: `${categoryId.charAt(0).toUpperCase() + categoryId.slice(1)} - ${v.objectName}`,
+            cx: v.cx,
+            cy: v.cy,
+            vertexId: v.id
+          };
+          dbData.objects.push(roomObj);
+        }
+      });
+
+      // Map SVG texts to POIs
+      textElements.forEach(textEl => {
+        const roomName = textEl.textContent.trim();
+        const normName = normalizeName(roomName);
+        
+        const matchedObj = dbData.objects.find(obj => normalizeName(obj.name) === normName);
+        if (matchedObj) {
+          textEl.style.cursor = "pointer";
+          textEl.classList.add("room-label-text");
+          matchedObj.element = textEl;
+
+          textEl.addEventListener("click", (e) => {
+            e.stopPropagation();
+            switchTab('navigation-tab');
+            if (selectingStartMode) {
+              handleSelectStartRoom(matchedObj);
+            } else {
+              handleSelectDestination(matchedObj);
+            }
+          });
+        }
+      });
+    }
+
+    // Populate list of directory points
+    function renderPOIList() {
+      const listContainer = document.getElementById("poiList");
+      listContainer.innerHTML = "";
+
+      const sortedPOIs = [...dbData.objects].sort((a, b) => a.name.localeCompare(b.name));
+      sortedPOIs.forEach(poi => {
+        const cat = dbData.categories.find(c => c.id === poi.categoryId);
+        const catName = cat ? cat.name : "Location";
+        const badgeClass = `badge-${poi.categoryId}`;
+
+        const card = document.createElement("div");
+        card.className = "poi-card";
+        card.dataset.id = poi.id;
+        card.innerHTML = `
+          <div class="poi-info">
+            <div class="poi-name">${poi.name}</div>
+            <div class="poi-desc">${poi.desc}</div>
+          </div>
+          <div class="poi-meta">
+            <span class="poi-badge ${badgeClass}">${catName}</span>
+          </div>
+        `;
+
+        card.addEventListener("click", () => {
+          if (selectingStartMode) {
+            handleSelectStartRoom(poi);
+          } else {
+            handleSelectDestination(poi);
+          }
+        });
+        listContainer.appendChild(card);
+      });
+    }
+
+    // Build graph structure using vertices and manual toggles
+    function initializeGraph() {
+      adjacencyList = {};
+      graphData.edges = [];
+      const edgeKeySet = new Set();
+
+      graphData.vertices.forEach(v => {
+        adjacencyList[v.id] = [];
+      });
+
+      const addEdge = (vId1, vId2, dist, isManual = false) => {
+        const key = [vId1, vId2].sort().join('-');
+        
+        if (manualEdgeOverrides[key] === false) {
+          return;
+        }
+
+        if (!edgeKeySet.has(key)) {
+          edgeKeySet.add(key);
+          graphData.edges.push({ from: vId1, to: vId2, distance: dist, isManual: isManual || !!manualEdgeOverrides[key] });
+          
+          if (adjacencyList[vId1] && adjacencyList[vId2]) {
+            adjacencyList[vId1].push({ node: vId2, weight: dist });
+            adjacencyList[vId2].push({ node: vId1, weight: dist });
+          }
+        }
+      };
+
+      // Load original graph edges
+      if (currentGraphData.edges) {
+        currentGraphData.edges.forEach(edge => {
+          const v1 = graphData.vertices.find(v => v.id === edge.from);
+          const v2 = graphData.vertices.find(v => v.id === edge.to);
+          if (v1 && v2) {
+            const dist = Math.sqrt(Math.pow(v1.cx - v2.cx, 2) + Math.pow(v1.cy - v2.cy, 2));
+            addEdge(edge.from, edge.to, dist, false);
+          }
+        });
+      }
+
+      // Add manual connections
+      Object.keys(manualEdgeOverrides).forEach(key => {
+        if (manualEdgeOverrides[key] === true) {
+          const [vId1, vId2] = key.split('-');
+          const v1 = graphData.vertices.find(v => v.id === vId1);
+          const v2 = graphData.vertices.find(v => v.id === vId2);
+          if (v1 && v2) {
+            const dist = Math.sqrt(Math.pow(v1.cx - v2.cx, 2) + Math.pow(v1.cy - v2.cy, 2));
+            addEdge(vId1, vId2, dist, true);
+          }
+        }
+      });
+    }
+
+    // Render nodes visually on SVG canvas
+    function drawGraphNodes() {
+      const vertexGroup = document.getElementById("Vertexes");
+      if (!vertexGroup) return;
+      vertexGroup.innerHTML = "";
+
+      graphData.vertices.forEach(v => {
+        const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+        circle.setAttribute("cx", v.cx);
+        circle.setAttribute("cy", v.cy);
+        circle.setAttribute("r", "6");
+        circle.setAttribute("id", `node-${v.id}`);
+        circle.setAttribute("class", `position ${v.id === startVertexId ? 'active-start' : ''}`);
+        
+        circle.addEventListener("click", (e) => {
+          e.stopPropagation();
+          if (selectingStartMode) {
+            handleSelectStartNode(v.id);
+          } else if (isEdgeEditMode) {
+            handleEdgeEditNodeClick(v.id);
+          } else {
+            highlightNode(v.id);
+          }
+        });
+
+        vertexGroup.appendChild(circle);
+      });
+    }
+
+    // Render edges visually on SVG canvas
+    function drawGraphEdges() {
+      const edgesGroup = document.getElementById("Edges");
+      if (!edgesGroup) return;
+      const routePath = document.getElementById("navigation-route");
+      edgesGroup.innerHTML = "";
+      if (routePath) edgesGroup.appendChild(routePath);
+
+      graphData.edges.forEach((edge) => {
+        const fromV = graphData.vertices.find(v => v.id === edge.from);
+        const toV = graphData.vertices.find(v => v.id === edge.to);
+        
+        if (fromV && toV) {
+          const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+          line.setAttribute("x1", fromV.cx);
+          line.setAttribute("y1", fromV.cy);
+          line.setAttribute("x2", toV.cx);
+          line.setAttribute("y2", toV.cy);
+          
+          let edgeClass = "wp-edge";
+          if (edge.isManual) {
+            edgeClass += " manual-link";
+          }
+          line.setAttribute("class", edgeClass);
+          line.setAttribute("id", `edge-${edge.from}-${edge.to}`);
+          edgesGroup.appendChild(line);
+        }
+      });
+    }
+
+    // Dijkstra algorithm implementation
+    function findShortestPath(startNode, endNode) {
+      const distances = {};
+      const prev = {};
+      const pq = [];
+
+      Object.keys(adjacencyList).forEach(node => {
+        distances[node] = Infinity;
+        prev[node] = null;
+      });
+
+      distances[startNode] = 0;
+      pq.push({ node: startNode, dist: 0 });
+
+      while (pq.length > 0) {
+        pq.sort((a, b) => a.dist - b.dist);
+        const { node: currNode, dist: currDist } = pq.shift();
+
+        if (currNode === endNode) break;
+        if (currDist > distances[currNode]) continue;
+
+        const neighbors = adjacencyList[currNode] || [];
+        for (const neighbor of neighbors) {
+          const alt = distances[currNode] + neighbor.weight;
+          if (alt < distances[neighbor.node]) {
+            distances[neighbor.node] = alt;
+            prev[neighbor.node] = currNode;
+            pq.push({ node: neighbor.node, dist: alt });
+          }
+        }
+      }
+
+      const path = [];
+      let u = endNode;
+      while (u !== null) {
+        path.unshift(u);
+        u = prev[u];
+      }
+
+      return {
+        path: path[0] === startNode ? path : [],
+        distance: distances[endNode]
+      };
+    }
+
+    // Selected Start location handler
+    function handleSelectStartRoom(roomPoi) {
+      selectedStartObj = roomPoi;
+
+      const oldStartNode = document.getElementById(`node-${startVertexId}`);
+      if (oldStartNode) oldStartNode.classList.remove("active-start");
+
+      startVertexId = roomPoi.vertexId;
+
+      const newStartNode = document.getElementById(`node-${startVertexId}`);
+      if (newStartNode) newStartNode.classList.add("active-start");
+
+      document.querySelectorAll(".poi-card").forEach(card => {
+        card.classList.remove("active-start");
+        if (card.dataset.id === roomPoi.id) card.classList.add("active-start");
+      });
+
+      document.querySelectorAll(".room-label-text").forEach(txt => {
+        txt.classList.remove("active-start");
+        if (txt.textContent.trim() === roomPoi.name) txt.classList.add("active-start");
+      });
+
+      document.getElementById("startSearch").value = "From: " + roomPoi.name;
+
+      selectingStartMode = false;
+      const changeStartBtn = document.getElementById("changeStartBtn");
+      changeStartBtn.textContent = "Tap Map";
+      changeStartBtn.classList.remove("selecting");
+
+      showToast(`Start set to ${roomPoi.name}`);
+      calculateAndDrawRoute();
+    }
+
+    function handleSelectStartNode(nodeId) {
+      const oldStart = document.getElementById(`node-${startVertexId}`);
+      if (oldStart) oldStart.classList.remove("active-start");
+
+      startVertexId = nodeId;
+      selectingStartMode = false;
+
+      const changeStartBtn = document.getElementById("changeStartBtn");
+      changeStartBtn.textContent = "Tap Map";
+      changeStartBtn.classList.remove("selecting");
+
+      const newStart = document.getElementById(`node-${startVertexId}`);
+      if (newStart) newStart.classList.add("active-start");
+
+      const nodeObj = graphData.vertices.find(v => v.id === startVertexId);
+      const startLabel = nodeObj?.objectName ? nodeObj.objectName : `Node (${nodeObj.id})`;
+      document.getElementById("startSearch").value = "From: " + startLabel;
+
+      document.querySelectorAll(".room-label-text").forEach(txt => txt.classList.remove("active-start"));
+      selectedStartObj = nodeObj?.objectName ? dbData.objects.find(o => o.name === nodeObj.objectName) : null;
+
+      showToast("Starting position updated!");
+      calculateAndDrawRoute();
+    }
+
+    // Destination location click handler
+    function handleSelectDestination(poi) {
+      selectedDestObj = poi;
+
+      document.querySelectorAll(".poi-card").forEach(card => {
+        card.classList.remove("active");
+        if (card.dataset.id === poi.id) card.classList.add("active");
+      });
+
+      document.querySelectorAll(".room-label-text").forEach(txt => {
+        txt.classList.remove("active-dest");
+        if (txt.textContent.trim() === poi.name) txt.classList.add("active-dest");
+      });
+
+      document.getElementById("poiSearch").value = poi.name;
+
+      calculateAndDrawRoute();
+    }
+
+    // Path calculation and visual drawing updates
+    function calculateAndDrawRoute() {
+      if (!startVertexId || !selectedDestObj) return;
+
+      const targetVertex = graphData.vertices.find(v => v.objectName === selectedDestObj.name);
+      if (!targetVertex) {
+        showToast("Error: Room coordinates not connected in pathfinding graph.");
+        return;
+      }
+
+      const { path, distance } = findShortestPath(startVertexId, targetVertex.id);
+
+      const navRoutePath = document.getElementById("navigation-route");
+      if (path.length === 0) {
+        if (navRoutePath) navRoutePath.setAttribute("d", "");
+        document.getElementById("routeHud").style.display = "none";
+        showToast("No path connects these positions.");
+        return;
+      }
+
+      const pathString = path.map((vId, idx) => {
+        const v = graphData.vertices.find(vtx => vtx.id === vId);
+        return `${idx === 0 ? 'M' : 'L'}${v.cx} ${v.cy}`;
+      }).join(' ');
+
+      if (navRoutePath) navRoutePath.setAttribute("d", pathString);
+
+      const routeHud = document.getElementById("routeHud");
+      document.getElementById("hudDestName").textContent = selectedDestObj.name;
+      
+      const distanceMeters = Math.round(distance * 0.4);
+      document.getElementById("hudDist").textContent = `${distanceMeters}m`;
+      document.getElementById("hudTime").textContent = `${Math.ceil(distanceMeters / 1.2)}s`;
+      routeHud.style.display = "flex";
+    }
+
+    // Clear active navigation routes
+    function clearNavigation() {
+      selectedDestObj = null;
+      selectedStartObj = null;
+      startVertexId = null;
+      
+      const navRoute = document.getElementById("navigation-route");
+      if (navRoute) navRoute.setAttribute("d", "");
+      
+      document.getElementById("routeHud").style.display = "none";
+      document.getElementById("poiSearch").value = "";
+      document.getElementById("startSearch").value = "";
+
+      document.querySelectorAll(".poi-card").forEach(c => {
+        c.classList.remove("active");
+        c.classList.remove("active-start");
+      });
+      document.querySelectorAll(".room-label-text").forEach(txt => {
+        txt.classList.remove("active-dest");
+        txt.classList.remove("active-start");
+      });
+      document.querySelectorAll(".position").forEach(node => {
+        node.classList.remove("active-start");
+      });
+    }
+
+    // Debugger Node Inspector visual highlights
+    function highlightNode(nodeId) {
+      selectedNodeId = nodeId;
+
+      document.querySelectorAll(".position").forEach(n => n.classList.remove("highlighted"));
+      document.querySelectorAll(".wp-edge").forEach(e => e.classList.remove("highlighted"));
+
+      const inspectorPanel = document.getElementById("inspectorPanel");
+      if (!nodeId) {
+        inspectorPanel.innerHTML = `
+          <span style="font-size: 12px; color: var(--text-muted); font-style: italic;">
+            Click any node on the map to inspect its connections and coordinates.
+          </span>`;
+        return;
+      }
+
+      const vertex = graphData.vertices.find(v => v.id === nodeId);
+      const connections = adjacencyList[nodeId] || [];
+
+      const nodeEl = document.getElementById(`node-${nodeId}`);
+      if (nodeEl) nodeEl.classList.add("highlighted");
+
+      connections.forEach(conn => {
+        const edgeEl1 = document.getElementById(`edge-${nodeId}-${conn.node}`);
+        const edgeEl2 = document.getElementById(`edge-${conn.node}-${nodeId}`);
+        if (edgeEl1) edgeEl1.classList.add("highlighted");
+        if (edgeEl2) edgeEl2.classList.add("highlighted");
+      });
+
+      const startLabel = vertex.objectName ? ` (${vertex.objectName})` : "";
+      
+      let connectionsHTML = connections.map(conn => {
+        const neighbor = graphData.vertices.find(v => v.id === conn.node);
+        const name = neighbor.objectName ? ` (${neighbor.objectName})` : "";
+        return `
+          <div class="inspector-row">
+            <span class="inspector-label">To Node ${conn.node}${name}:</span>
+            <span class="inspector-val">${Math.round(conn.weight)} px</span>
+          </div>`;
+      }).join('');
+
+      if (connectionsHTML === "") {
+        connectionsHTML = '<div class="inspector-row"><span class="inspector-label" style="color: #EF4444;">Disconnected Node</span></div>';
+      }
+
+      inspectorPanel.innerHTML = `
+        <div class="inspector-card">
+          <div class="inspector-title">🍊 Node Inspector: ${nodeId}${startLabel}</div>
+          <div class="inspector-row">
+            <span class="inspector-label">Coordinate X:</span>
+            <span class="inspector-val">${Math.round(vertex.cx)}</span>
+          </div>
+          <div class="inspector-row">
+            <span class="inspector-label">Coordinate Y:</span>
+            <span class="inspector-val">${Math.round(vertex.cy)}</span>
+          </div>
+          <div style="border-top: 1px solid rgba(255,255,255,0.1); margin: 6px 0; padding-top: 6px;">
+            <div class="dev-label" style="font-size: 9px; margin-bottom: 4px;">Connected Neighbors</div>
+            ${connectionsHTML}
+          </div>
+        </div>
+      `;
+    }
+
+    // Toggle Edge Edit Mode
+    function toggleEdgeEditMode() {
+      isEdgeEditMode = !isEdgeEditMode;
+      const btn = document.getElementById("edgeEditBtn");
+      
+      if (editFirstSelectedNodeId) {
+        const el = document.getElementById(`node-${editFirstSelectedNodeId}`);
+        if (el) el.classList.remove("edit-selected");
+        editFirstSelectedNodeId = null;
+      }
+      highlightNode(null);
+
+      if (isEdgeEditMode) {
+        btn.textContent = "🔗 Manual Edge Builder Mode: ACTIVE";
+        btn.classList.add("active");
+        showToast("Edge editor active. Click Node A, then click Node B to connect/disconnect them!");
+      } else {
+        btn.textContent = "🔗 Manual Edge Builder Mode: OFF";
+        btn.classList.remove("active");
+      }
+    }
+
+    // Handle clicks during visual graph layout editing
+    function handleEdgeEditNodeClick(nodeId) {
+      const mapSelect = document.getElementById("mapSelect");
+      const cleanName = mapSelect.value.replace('.svg', '');
+
+      if (!editFirstSelectedNodeId) {
+        editFirstSelectedNodeId = nodeId;
+        const el = document.getElementById(`node-${nodeId}`);
+        if (el) el.classList.add("edit-selected");
+        showToast(`Selected Node ${nodeId}. Now click another node to toggle connection.`);
+      } else {
+        const nodeA = editFirstSelectedNodeId;
+        const nodeB = nodeId;
+
+        const el = document.getElementById(`node-${nodeA}`);
+        if (el) el.classList.remove("edit-selected");
+        editFirstSelectedNodeId = null;
+
+        if (nodeA === nodeB) {
+          showToast("Selected same node. Cancelled.");
+          return;
+        }
+
+        const key = [nodeA, nodeB].sort().join('-');
+        const currentNeighbors = adjacencyList[nodeA] || [];
+        const isCurrentlyConnected = currentNeighbors.some(conn => conn.node === nodeB);
+
+        if (isCurrentlyConnected) {
+          manualEdgeOverrides[key] = false;
+          showToast(`Disconnected Node ${nodeA} and Node ${nodeB}`);
+        } else {
+          manualEdgeOverrides[key] = true;
+          showToast(`Connected Node ${nodeA} and Node ${nodeB}`);
+        }
+
+        localStorage.setItem(`kmap_manual_edges_${cleanName}`, JSON.stringify(manualEdgeOverrides));
+
+        initializeGraph();
+        drawGraphEdges();
+        drawGraphNodes();
+        calculateAndDrawRoute();
+      }
+    }
+
+    // Delete manual overrides and reset layout
+    function resetToAutoGraph() {
+      const mapSelect = document.getElementById("mapSelect");
+      const cleanName = mapSelect.value.replace('.svg', '');
+
+      if (confirm("Are you sure you want to delete all manual edge connections?")) {
+        manualEdgeOverrides = {};
+        localStorage.removeItem(`kmap_manual_edges_${cleanName}`);
+        
+        initializeGraph();
+        drawGraphEdges();
+        drawGraphNodes();
+        
+        if (editFirstSelectedNodeId) {
+          const el = document.getElementById(`node-${editFirstSelectedNodeId}`);
+          if (el) el.classList.remove("edit-selected");
+          editFirstSelectedNodeId = null;
+        }
+        
+        calculateAndDrawRoute();
+        showToast("Graph reset to defaults.");
+      }
+    }
+
+    // Export graph topology as JSON
+    function exportGraphJSON() {
+      const mapSelect = document.getElementById("mapSelect");
+      const mapName = mapSelect.value;
+      const cleanName = mapName.replace('.svg', '');
+
+      const dataToExport = {
+        name: cleanName + " navigation graph",
+        vertices: graphData.vertices.map(v => ({ id: v.id, cx: Math.round(v.cx), cy: Math.round(v.cy), roomName: v.objectName })),
+        edges: graphData.edges.map(e => ({ from: e.from, to: e.to }))
+      };
+
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(dataToExport, null, 2));
+      const downloadAnchor = document.createElement('a');
+      downloadAnchor.setAttribute("href", dataStr);
+      downloadAnchor.setAttribute("download", `${cleanName}-graph.json`);
+      document.body.appendChild(downloadAnchor);
+      downloadAnchor.click();
+      downloadAnchor.remove();
+      showToast("JSON configuration exported successfully!");
+    }
+
+    // Set up global UI listeners
+    function setupEventListeners() {
+      if (eventListenersInitialized) return;
+      eventListenersInitialized = true;
+
+      // Toggle Start mode button
+      const changeStartBtn = document.getElementById("changeStartBtn");
+      changeStartBtn.addEventListener("click", () => {
+        selectingStartMode = !selectingStartMode;
+        if (selectingStartMode) {
+          changeStartBtn.textContent = "Cancel";
+          changeStartBtn.classList.add("selecting");
+          showToast("Click a node or room label on the map to set start position!");
+        } else {
+          changeStartBtn.textContent = "Tap Map";
+          changeStartBtn.classList.remove("selecting");
+        }
+      });
+
+      // Search filters for Start position
+      const startSearch = document.getElementById("startSearch");
+      const suggestions = document.getElementById("suggestions");
+
+      startSearch.addEventListener("click", () => {
+        selectingStartMode = true;
+        changeStartBtn.textContent = "Cancel";
+        changeStartBtn.classList.add("selecting");
+        showToast("Click a node or room label on the map to set start position!");
+      });
+
+      // Search filters for Destination
+      const poiSearch = document.getElementById("poiSearch");
+      poiSearch.addEventListener("input", (e) => {
+        const val = e.target.value.toLowerCase().trim();
+        if (val.length === 0) {
+          suggestions.style.display = "none";
+          return;
+        }
+
+        const filtered = dbData.objects.filter(poi => poi.name.toLowerCase().includes(val));
+        suggestions.innerHTML = "";
+
+        if (filtered.length > 0) {
+          filtered.forEach(poi => {
+            const cat = dbData.categories.find(c => c.id === poi.categoryId);
+            const li = document.createElement("li");
+            li.className = "suggestion-item";
+            li.innerHTML = `
+              <span class="suggestion-name">${poi.name}</span>
+              <span class="suggestion-category">${cat ? cat.name : 'Location'}</span>
+            `;
+            li.addEventListener("click", () => {
+              if (selectingStartMode) {
+                handleSelectStartRoom(poi);
+              } else {
+                handleSelectDestination(poi);
+              }
+              poiSearch.value = poi.name;
+              suggestions.style.display = "none";
+            });
+            suggestions.appendChild(li);
+          });
+          suggestions.style.display = "block";
+        } else {
+          suggestions.innerHTML = `<li class="suggestion-item"><span class="suggestion-name" style="color: var(--text-muted);">No locations found</span></li>`;
+          suggestions.style.display = "block";
+        }
+      });
+
+      document.addEventListener("click", (e) => {
+        if (!e.target.closest(".search-box")) {
+          suggestions.style.display = "none";
+        }
+      });
+
+      // Pan & Zoom Implementation
+      const viewport = document.getElementById("mapViewport");
+      viewport.addEventListener("mousedown", (e) => {
+        if (e.target.closest(".control-btn") || e.target.closest(".position") || e.target.closest(".room-label-text")) return;
+        isDragging = true;
+        viewport.style.cursor = "grabbing";
+        startDragX = e.clientX - panX;
+        startDragY = e.clientY - panY;
+      });
+
+      window.addEventListener("mousemove", (e) => {
+        if (!isDragging) return;
+        panX = e.clientX - startDragX;
+        panY = e.clientY - startDragY;
+        applyTransform();
+      });
+
+      window.addEventListener("mouseup", () => {
+        isDragging = false;
+        viewport.style.cursor = "grab";
+      });
+
+      viewport.addEventListener("wheel", (e) => {
+        e.preventDefault();
+        const zoomIntensity = 0.05;
+        const rect = viewport.getBoundingClientRect();
+        const mouseX = e.clientX - rect.left;
+        const mouseY = e.clientY - rect.top;
+
+        const svgX = (mouseX - panX) / zoomLevel;
+        const svgY = (mouseY - panY) / zoomLevel;
+
+        const zoomFactor = e.deltaY < 0 ? (1 + zoomIntensity) : (1 - zoomIntensity);
+        const nextZoom = Math.min(Math.max(zoomLevel * zoomFactor, 0.4), 4.0);
+
+        panX = mouseX - svgX * nextZoom;
+        panY = mouseY - svgY * nextZoom;
+        zoomLevel = nextZoom;
+
+        applyTransform();
+      }, { passive: false });
+    }
+
+    // Toggle layer visibility
+    function toggleLayer(layerId, isVisible) {
+      const layer = document.getElementById(layerId);
+      if (layer) {
+        layer.style.display = isVisible ? "block" : "none";
+      }
+    }
+
+    // Apply pan & zoom transforms to SVG
+    function applyTransform() {
+      const mapSvg = document.getElementById("map-svg");
+      if (mapSvg) {
+        mapSvg.style.transform = `translate(${panX}px, ${panY}px) scale(${zoomLevel})`;
+      }
+    }
+
+    // Adjust zoom dynamically from floating buttons
+    function adjustZoom(factor) {
+      const viewport = document.getElementById("mapViewport");
+      const rect = viewport.getBoundingClientRect();
+      const midX = rect.width / 2;
+      const midY = rect.height / 2;
+
+      const svgX = (midX - panX) / zoomLevel;
+      const svgY = (midY - panY) / zoomLevel;
+
+      const nextZoom = Math.min(Math.max(zoomLevel * factor, 0.4), 4.0);
+      panX = midX - svgX * nextZoom;
+      panY = midY - svgY * nextZoom;
+      zoomLevel = nextZoom;
+
+      applyTransform();
+    }
+
+    // Reset Viewport layout
+    function resetView() {
+      zoomLevel = 1.0;
+      panX = 0;
+      panY = 0;
+      applyTransform();
+    }
+
+    // Update UI helper
+    function updateNavigationUI() {
+      if (graphData.vertices.length > 0) {
+        document.getElementById("startSearch").value = "";
+      }
+    }
+
+    // Show toast notifications
+    function showToast(message) {
+      const toast = document.getElementById("toast");
+      toast.textContent = message;
+      toast.classList.add("show");
+      setTimeout(() => {
+        toast.classList.remove("show");
+      }, 3000);
+    }
+  </script>
+</body>
+</html>
